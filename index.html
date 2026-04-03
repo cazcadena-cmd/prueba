@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video</title>
+
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    background:#000;
+    height:100%;
+    font-family: sans-serif;
+}
+
+/* VIDEO */
+#videoContainer iframe{
+    width:100%;
+    height:100vh;
+    border:none;
+    margin-top: -27px;
+}
+
+/* Para cuando el fondo es Imagen */
+#videoContainer img {
+    width: 100%;
+    height: 100vh;
+    object-fit: cover;
+    display: block;
+}
+
+/* BOTÓN ADMIN */
+.admin-btn{
+    position:fixed;
+    top:20px;
+    right:10px;
+    width:46px;
+    height:46px;
+    border-radius:12px;
+    background:linear-gradient(180deg, #ff6f48 0%, #f4436f 100%);
+    border:none;
+    cursor:pointer;
+    z-index:999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+}
+
+/* =========================================================
+   NUEVO: LÓGICA DE FONDOS SEMITRANSPARENTES PARA MODALES
+   ========================================================= */
+/* Quitamos el background directo y preparamos el pseudo-elemento */
+#adminModal, #imageModal, #reserveModal, #infoModal {
+    background: transparent !important; /* Importante para que se vea el ::before */
+    /* Crea un contexto de apilamiento para que el z-index -1 funcione relativo al modal */
+    isolation: isolate; 
+}
+
+/* Pseudo-elemento que actúa como fondo con opacidad */
+#adminModal::before, 
+#imageModal::before, 
+#reserveModal::before, 
+#infoModal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Usa la variable controlada por JS, con un fallback negro */
+    background: var(--modal-bg, rgba(0, 0, 0, 0.85)); 
+    /* AQUÍ ESTÁ LA MAGIA: Opacidad siempre al 90% (0.9) */
+    opacity: 0.7; 
+    z-index: -1; /* Se coloca detrás del contenido del modal */
+    border-radius: inherit; /* Hereda las curvas del modal padre */
+    pointer-events: none; /* Permite clicks a través si fuera necesario */
+}
+/* ========================================================= */
+
+
+/* MODAL ADMIN (TOP) */
+.modal{
+    position:fixed;
+    top:-100%;
+    left:0;
+    width:100%;
+    /* background:rgba(0, 0, 0, 0.5);  <-- ELIMINADO, AHORA LO MANEJA ::before */
+    padding:18px;
+    box-shadow:0 20px 40px rgba(0,0,0,.6);
+    transition:.4s ease;
+    z-index:1000;
+}
+
+.modal.active{
+    top:0;
+}
+
+/* MODAL DE IMAGEN (IZQUIERDA A DERECHA) */
+#imageModal {
+    position: fixed;
+    top: 30;
+    left: 0;
+    width: 80%;
+    height: 78%; 
+    border-radius: 0 24px 24px 0;
+    /* background: rgba(0, 0, 0, 0.5); <-- ELIMINADO */
+    z-index: 2000; 
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    
+    transform: translateX(-100%); 
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    opacity: 0;
+}
+
+#imageModal.active {
+    transform: translateX(0); 
+    opacity: 1;
+}
+
+/* Estilo de la Imagen dentro del Modal */
+#imageModal img {
+    max-width: 100%;  
+    max-height: 90%; 
+    border-radius: 20px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    object-fit: contain;
+}
+
+.modal-box{
+    max-width:350px;
+    width:100%;
+    margin: auto;
+    padding: 0 12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.modal-box input,
+.modal-box button{
+    padding:12px;
+    border-radius:10px;
+    border:none;
+}
+
+.modal-box input{
+    background:#2a2a2a;
+    color:#fff;
+}
+
+.modal-box button{
+    background:#ff5a5f;
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.close-btn{
+    background:#333 !important;
+}
+
+.warning{
+    color:#ffb84d;
+    font-size:13px;
+    display:none;
+}
+.warning.show{ display:block; }
+
+*{
+    box-sizing:border-box;
+}
+
+.modal-title{
+    color:#fff;
+    font-size:20px;
+    font-weight:600;
+    text-align:center;
+    margin-bottom:6px;
+}
+
+.modal-actions{
+    display:flex;
+    gap:10px;
+}
+
+.modal-actions button{
+    flex:1;
+}
+  
+.bottom-container{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background: linear-gradient(180deg, #ff6f48 0%, #f4436f 100%);
+    border-radius: 22px 22px 0 0;
+    z-index: 997;
+    pointer-events: auto;
+}
+  
+.bottom-icons{
+    height:100%;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+}
+
+.icon{
+    width:46px;
+    height:46px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+}
+
+.icon svg{
+    width:30px;
+    height:30px;
+    fill:#fff;
+}
+
+/* ANIMACIÓN ENTRADA ICONOS */
+@keyframes dropDown {
+    0%{
+        transform: translateY(-25px);
+        opacity: 0;
+    }
+    100%{
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.icon{
+    opacity:0;
+    animation: dropDown 0.6s ease-out forwards;
+}
+
+.icon:nth-child(1){ animation-delay: .1s; }
+.icon:nth-child(2){ animation-delay: .2s; }
+.icon:nth-child(3){ animation-delay: .3s; }
+.icon:nth-child(4){ animation-delay: .4s; }
+
+.change-title{
+    color:#fff;
+    font-size:14px;
+    font-weight:500;
+    text-align:center;
+    display:none;
+    margin-bottom:6px;
+}
+  
+#colorPalette{
+    display:flex;
+    justify-content:center;
+}
+
+.color{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    cursor:pointer;
+    border:2px solid #fff;
+}
+  
+/* BOTÓN CERRAR MODAL IMAGEN */
+.close-image{
+    position:absolute;
+    top:15px;
+    right:20px;
+    font-size:32px;
+    font-weight:bold;
+    color:#fff;
+    cursor:pointer;
+    z-index:2100;
+    user-select:none;
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.close-image:hover{
+    transform: scale(1.15);
+    opacity:0.8;
+}
+
+/* ===== MODAL RESERVAS (DERECHA A IZQUIERDA) ===== */
+#reserveModal{
+    position: fixed;
+    top: 30px;
+    right: 0;
+    width: 50%;
+    height: 78%;
+    border-radius: 24px 0 0 24px;
+    /* background: rgba(0, 0, 0, 0.5); <-- ELIMINADO */
+    z-index: 3000;
+    padding: 25px;
+    transform: translateX(100%);
+    transition: transform .5s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#reserveModal.active{
+    transform: translateX(0);
+}
+
+#reserveModal h2{
+    color: #fff;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.reserve-input{
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #2a2a2a;
+    color: #fff;
+}
+  
+  ::placeholder{
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.reserve-btn{
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(180deg, #ff6f48 0%, #f4436f 100%);
+}
+
+.close-reserve{
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    font-size: 28px;
+    color: #fff;
+    cursor: pointer;
+}
+  
+  .reserve-label{
+    color:#fff;
+    font-size:13px;
+    opacity:0.8;
+    margin-left:4px;
+}
+
+/* ===== MODAL HORARIO (INFO) DESDE ABAJO ===== */
+#infoModal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    min-height: 180px;
+    /* background: rgba(0, 0, 0, 0.85); <-- ELIMINADO */
+    border-radius: 30px 30px 30px 30px; 
+    z-index: 4000; 
+    padding: 25px;
+    transform: translateY(100%); 
+    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+}
+
+#infoModal.active {
+    transform: translateY(-85px); 
+}
+
+#infoModal h2 {
+    font-size: 22px;
+    margin: 0 0 10px 0;
+}
+
+#infoModal p {
+    font-size: 14px;
+    margin: 0 0 25px 0;
+    opacity: 0.9;
+}
+
+.social-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.social-btn {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+    transition: transform 0.2s, background 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.close-info {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+  
+  /* BOTÓN PROMOCIÓN */
+
+.promo-btn{
+    position:absolute;
+    bottom:5px;
+    left:50%;
+    transform:translateX(-50%);
+    
+    padding:6px 25px;
+    min-width:200px;
+    border:1px solid rgba(255,255,255,0.8);
+    border-radius:16px;
+    
+    font-size:18px;
+    font-weight:700;
+    color:#fff;
+    
+    background:inherit; /* hereda el color del sistema */
+    
+    display:flex;
+    align-items:center;
+    gap:10px;
+    
+    cursor:pointer;
+    
+    /* SOMBRAS 3D */
+    box-shadow:
+        inset 0 3px 6px rgba(255,255,255,0.25),
+        inset 0 -4px 8px rgba(0,0,0,0.35),
+        0 6px 14px rgba(0,0,0,0.45);
+    
+    transition:transform .15s ease, box-shadow .15s ease;
+    
+    overflow:hidden;
+}
+
+/* efecto presionado */
+.promo-btn:active{
+    transform:translateX(-50%) scale(.96);
+    
+    box-shadow:
+        inset 0 4px 8px rgba(0,0,0,0.45),
+        0 3px 8px rgba(0,0,0,0.35);
+}
+  
+  .promo-btn::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-120%;
+    width:120%;
+    height:100%;
+    
+    background:linear-gradient(
+        120deg,
+        transparent,
+        rgba(255,255,255,0.45),
+        transparent
+    );
+    
+    animation:shine 4s infinite;
+}
+
+@keyframes shine{
+    0%{ left:-120%; }
+    50%{ left:120%; }
+    100%{ left:120%; }
+}
+  
+  @keyframes pulseBtn{
+    0%{ transform:translateX(-50%) scale(1); }
+    50%{ transform:translateX(-50%) scale(1.07); }
+    100%{ transform:translateX(-50%) scale(1); }
+}
+
+.promo-btn{
+    animation:pulseBtn 3s infinite;
+}
+  
+  .hand{
+    font-size:18px;
+    animation:handPop .8s ease;
+}
+
+@keyframes handPop{
+    0%{
+        transform:scale(0);
+        opacity:0;
+    }
+    70%{
+        transform:scale(1.3);
+    }
+    100%{
+        transform:scale(1);
+        opacity:1;
+    }
+}
+  
+</style>
+</head>
+
+  
+<body>
+
+<button class="admin-btn" onclick="openLogin()">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear-fill" viewBox="0 0 16 16">
+  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+</svg>
+</button>
+
+<div class="modal" id="adminModal">
+    <div class="modal-box">
+
+        <h2 class="modal-title">Panel Administrativo</h2>
+
+        <input type="password" id="password" placeholder="Contraseña">
+
+        <div id="changeTitle" class="change-title">
+            Cambia tu video
+        </div>
+
+        <input type="text" id="videoLink" placeholder="Link de YouTube" style="display:none">
+
+        <input type="file" id="bgInput" accept="image/*" style="display:none" onchange="uploadBg(this)">
+        <button id="bgBtn" style="display:none;" onclick="document.getElementById('bgInput').click()">
+            Poner imagen no video
+        </button>
+
+        <button id="colorBtn" style="display:none;" onclick="togglePalette()">
+            Cambiar color
+        </button>
+
+        <input type="file" id="menuInput" accept="image/*" style="display:none" onchange="uploadMenu(this)">
+        <button id="menuBtn" style="display:none;" onclick="document.getElementById('menuInput').click()">
+            Cambiar menú del día u oferta
+        </button>
+
+        <div id="colorPalette" style="display:none; gap:10px; flex-wrap:wrap; justify-content:center;">
+           <!-- ROJOS / CORALES (2) -->
+<div class="color" data-color="#e53935"></div>  <!-- Rojo moderno -->
+<div class="color" data-color="#ff7043"></div>  <!-- Coral vibrante -->
+
+<!-- NARANJAS / AMARILLOS (3) -->
+<div class="color" data-color="#fb8c00"></div>  <!-- Naranja fuerte -->
+<div class="color" data-color="linear-gradient(180deg, #00e5ff 0%, #050505 100%)"></div>
+<div class="color" data-color="#ffca28"></div>  <!-- Amarillo cálido -->
+
+<!-- MORADOS / ROSAS (3) -->
+<div class="color" data-color="#8e24aa"></div>  <!-- Morado elegante -->
+<div class="color" data-color="#ab47bc"></div>  <!-- Lila moderno -->
+<div class="color" data-color="#ec407a"></div>  <!-- Rosa fuerte -->
+
+<!-- AZULES (3 bien diferenciados) -->
+<div class="color" data-color="#1e88e5"></div>  <!-- Azul brillante -->
+<div class="color" data-color="#3949ab"></div>  <!-- Azul índigo -->
+<div class="color" data-color="#00acc1"></div>  <!-- Turquesa -->
+
+<!-- VERDES (3 diferentes entre sí) -->
+<div class="color" data-color="#43a047"></div>  <!-- Verde natural -->
+<div class="color" data-color="#2e7d32"></div>  <!-- Verde bosque -->
+<div class="color" data-color="#00bfa5"></div>  <!-- Verde aqua -->
+
+<!-- TONOS OSCUROS / NEUTROS (4) -->
+<div class="color" data-color="#263238"></div>  <!-- Gris azulado oscuro -->
+<div class="color" data-color="#455a64"></div>  <!-- Gris moderno -->
+<div class="color" data-color="#6d4c41"></div>  <!-- Café elegante -->
+<div class="color" data-color="#212121"></div>  <!-- Negro moderno -->
+
+            <!-- ???? ROJOS / CORALES (2) -->
+<div class="color" data-color="linear-gradient(180deg, #ff1744 0%, #b71c1c 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #ff7043 0%, #bf360c 100%)"></div>
+
+<!-- ???? NARANJAS / AMARILLOS (3) -->
+<div class="color" data-color="linear-gradient(180deg, #ff00cc 0%, #000000 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #ff6fa5 0%, #ffffff 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #f7971e 0%, #ffd200 100%)"></div>
+
+<!-- ???? MORADOS / ROSAS (3) -->
+<div class="color" data-color="linear-gradient(180deg, #8e24aa 0%, #4a148c 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #ab47bc 0%, #6a1b9a 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #ec407a 0%, #ad1457 100%)"></div>
+
+<!-- ???? AZULES (3 bien diferenciados) -->
+<div class="color" data-color="linear-gradient(180deg, #1e88e5 0%, #0d47a1 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #3949ab 0%, #1a237e 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #00acc1 0%, #006064 100%)"></div>
+
+<!-- ???? VERDES (3 diferentes entre sí) -->
+<div class="color" data-color="linear-gradient(180deg, #43a047 0%, #1b5e20 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #ec407a 0%, #000000 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #00bfa5 0%, #00695c 100%)"></div>
+
+<!-- ⚫ OSCUROS / NEUTROS (4) -->
+<div class="color" data-color="linear-gradient(180deg, #424242 0%, #000000 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #37474f 0%, #102027 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #6d4c41 0%, #3e2723 100%)"></div>
+<div class="color" data-color="linear-gradient(180deg, #455a64 0%, #263238 100%)"></div>
+           
+        </div>
+
+        <div class="warning" id="msg"></div>
+
+        <div class="modal-actions">
+            <button onclick="adminAction()">Guardar</button>
+            <button class="close-btn" onclick="closeModal()">Cerrar</button>
+        </div>
+
+    </div>
+</div>
+
+<div id="imageModal" onclick="closeImageModal()">
+
+<div class="close-image" onclick="closeImageModal(); event.stopPropagation()">✕</div>
+
+<img src="https://i.imgur.com/MC9lOGC.png" alt="Imagen Popup" onclick="event.stopPropagation()">
+
+<button class="promo-btn" onclick="sendPromo(); event.stopPropagation()">
+
+<span class="hand">➜</span>
+¡Lo quiero!
+
+</button>
+
+</div>
+
+<div id="videoContainer"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const BUSINESS_ID = "negocio_demo_001";
+const PASSWORD = "as123456";
+
+firebase.initializeApp({
+    apiKey: "AIzaSyA9LJQetXeU8LTIF8_SQHnYd0qHZBXlqDo",
+    authDomain: "imagen-compartida.firebaseapp.com",
+    databaseURL: "https://imagen-compartida-default-rtdb.firebaseio.com",
+    projectId: "imagen-compartida"
+});
+
+const db = firebase.database();
+const ref = db.ref("videos/" + BUSINESS_ID);
+const colorRef = db.ref("colors/" + BUSINESS_ID);
+const menuRef = db.ref("menuImages/" + BUSINESS_ID);
+
+
+let logged = false;
+
+function openLogin(){
+    document.getElementById("adminModal").classList.add("active");
+}
+
+function closeModal(){
+    document.getElementById("adminModal").classList.remove("active");
+}
+
+/* --- NUEVAS FUNCIONES PARA EL MODAL DE IMAGEN --- */
+function openImageModal(){
+    document.getElementById("imageModal").classList.add("active");
+}
+
+function closeImageModal(){
+    document.getElementById("imageModal").classList.remove("active");
+}
+/* ------------------------------------------------ */
+
+function showMsg(t){
+    const m=document.getElementById("msg");
+    m.textContent=t;
+    m.classList.add("show");
+}
+
+function adminAction(){
+    const pass=document.getElementById("password");
+    const link=document.getElementById("videoLink");
+    const colorBtn=document.getElementById("colorBtn");
+    const bgBtn = document.getElementById("bgBtn");
+    const menuBtn = document.getElementById("menuBtn");
+
+    if(!logged){
+        if(pass.value!==PASSWORD){
+            showMsg("❌ Contraseña incorrecta");
+            return;
+        }
+
+        logged=true;
+        pass.style.display="none";
+        link.style.display="block";
+        document.getElementById("changeTitle").style.display="block";
+        colorBtn.style.display="block";
+        bgBtn.style.display="block";
+        menuBtn.style.display="block";
+
+        showMsg("✔ Acceso concedido");
+        return;
+    }
+
+    const url=link.value.trim();
+
+    // Si el campo está vacío, no hacemos nada (por si solo querían cambiar color o imagen)
+    if(url === "") {
+        closeModal();
+        return;
+    }
+
+    if(!url.includes("youtube.com") && !url.includes("youtu.be")){
+        showMsg("⚠️ Solo enlaces de YouTube");
+        return;
+    }
+
+    ref.set(url);
+    closeModal();
+    link.value="";
+}
+
+/* LÓGICA PARA CONVERTIR IMAGEN A BASE64 Y SUBIR */
+function convertBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+async function uploadBg(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const base64 = await convertBase64(input.files[0]);
+            // Reemplazamos el video con la imagen
+            ref.set(base64);
+            showMsg("✔ Fondo cambiado a Imagen");
+            setTimeout(closeModal, 1000);
+        } catch(e) {
+            showMsg("❌ Error al subir");
+        }
+    }
+}
+
+async function uploadMenu(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const base64 = await convertBase64(input.files[0]);
+            // Guardamos en la referencia de menú
+            menuRef.set(base64);
+            showMsg("✔ Menú actualizado");
+            setTimeout(closeModal, 1000);
+        } catch(e) {
+            showMsg("❌ Error al subir");
+        }
+    }
+}
+
+function togglePalette(){
+    const p=document.getElementById("colorPalette");
+    p.style.display = p.style.display==="flex" ? "none" : "flex";
+}
+  
+// GUARDAR COLOR EN FIREBASE
+document.querySelectorAll(".color").forEach(c=>{
+    c.onclick = () => {
+        const color = c.dataset.color;
+        colorRef.set(color);
+    };
+});
+  
+// PINTAR VISUALMENTE LA PALETA
+document.querySelectorAll(".color").forEach(c=>{
+    c.style.background = c.dataset.color;
+});
+
+// ESCUCHAR COLOR EN TODOS LOS DISPOSITIVOS
+colorRef.on("value", snap=>{
+    const color = snap.val();
+    if(!color) return;
+
+    // Cambios originales (botones y fondo general)
+    document.querySelector(".bottom-container").style.background = color;
+  const promoBtn = document.querySelector(".promo-btn");
+if(promoBtn) promoBtn.style.background = color;
+    document.querySelector(".admin-btn").style.background = color;
+
+    // --- NUEVOS CAMBIOS SOLICITADOS ---
+    
+    // 1. Botones (Cambiar color, Guardar, Reservar, NUEVOS BOTONES)
+    const btnColor = document.getElementById("colorBtn");
+    if(btnColor) btnColor.style.background = color;
+    
+    const btnBg = document.getElementById("bgBtn");
+    if(btnBg) btnBg.style.background = color;
+
+    const btnMenu = document.getElementById("menuBtn");
+    if(btnMenu) btnMenu.style.background = color;
+
+    const btnGuardar = document.querySelector(".modal-actions button"); // Primer botón (Guardar)
+    if(btnGuardar) btnGuardar.style.background = color;
+
+    const btnReservar = document.querySelector(".reserve-btn");
+    if(btnReservar) btnReservar.style.background = color;
+
+    // 2. Fondos de Modales (Admin, Imagen, Reserva, Info)
+    const modals = [
+        document.getElementById("adminModal"),
+        document.getElementById("imageModal"),
+        document.getElementById("reserveModal"),
+        document.getElementById("infoModal")
+    ];
+
+    modals.forEach(m => {
+        if(m) {
+            // Aseguramos que no tenga color de fondo directo
+            m.style.background = "transparent";
+            // Pasamos el color a la variable CSS
+            m.style.setProperty('--modal-bg', color);
+        }
+    });
+});
+
+// ESCUCHAR MENU/OFERTA (ICONO 2)
+menuRef.on("value", snap=>{
+    const imgData = snap.val();
+    if(imgData){
+        const imgTag = document.querySelector("#imageModal img");
+        if(imgTag) imgTag.src = imgData;
+    }
+});
+
+// ESCUCHAR VIDEO O IMAGEN DE FONDO
+ref.on("value", snap=>{
+    const url=snap.val();
+    if(!url) return;
+    
+    const container = document.getElementById("videoContainer");
+
+    // Detectar si es Imagen (Base64)
+    if(url.startsWith("data:image")) {
+        container.innerHTML = `<img src="${url}" alt="Background">`;
+    } else {
+        // Es Video de YouTube
+        let id="";
+        if(url.includes("watch?v=")) id=url.split("watch?v=")[1].split("&")[0];
+        else if(url.includes("youtu.be/")) id=url.split("youtu.be/")[1].split("?")[0];
+        else if(url.includes("/shorts/")) id=url.split("/shorts/")[1].split("?")[0];
+
+        container.innerHTML=
+        `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0&rel=0" allow="autoplay"></iframe>`;
+    }
+});
+  
+  function openReserve(){
+    document.getElementById("reserveModal").classList.add("active");
+}
+
+function closeReserve(){
+    document.getElementById("reserveModal").classList.remove("active");
+}
+
+function sendReservation(){
+    const name = document.getElementById("rName").value;
+    const people = document.getElementById("rPeople").value;
+    const occasion = document.getElementById("rOccasion").value;
+    const decor = document.getElementById("rDecor").value;
+    const datetime = document.getElementById("rDateTime").value;
+
+    if(!name || !people || !occasion || !decor || !datetime){
+    const msgBox = document.getElementById("reserveMsg");
+    msgBox.style.display = "block";
+    msgBox.textContent = "Completa todos los campos";
+    return;
+}
+
+    const msg =
+`*RESERVA*
+*Nombre:* ${name}
+*Personas:* ${people}
+*Ocasión:* ${occasion}
+*Decoración:* ${decor}
+⏰ *Fecha y hora:* ${datetime}`;
+
+    const phone = "573123127181";
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+    window.open(url, "_blank");
+}
+
+/* --- FUNCIONES MODAL INFO (HORARIO) --- */
+function openInfoModal(){
+    document.getElementById("infoModal").classList.add("active");
+}
+
+function closeInfoModal(){
+    document.getElementById("infoModal").classList.remove("active");
+}
+  
+  /* ===== BOTÓN PROMOCIÓN WHATSAPP ===== */
+
+function sendPromo(){
+
+const phone = "573123127181"; // tu número
+
+const text = "Hola quiero la promoción que aparece en la pantalla";
+
+const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+
+window.open(url, "_blank");
+
+}
+
+</script>
+  
+<div class="bottom-container">
+  <div class="bottom-icons">
+    
+<a href="catalogo.html">
+
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <path d="M13 .5c0-.276-.226-.506-.498-.465-1.703.257-2.94 2.012-3 8.462a.5.5 0 0 0 .498.5c.56.01 1 .13 1 1.003v5.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5zM4.25 0a.25.25 0 0 1 .25.25v5.122a.128.128 0 0 0 .256.006l.233-5.14A.25.25 0 0 1 5.24 0h.522a.25.25 0 0 1 .25.238l.233 5.14a.128.128 0 0 0 .256-.006V.25A.25.25 0 0 1 6.75 0h.29a.5.5 0 0 1 .498.458l.423 5.07a1.69 1.69 0 0 1-1.059 1.711l-.053.022a.92.92 0 0 0-.58.884L6.47 15a.971.971 0 1 1-1.942 0l.202-6.855a.92.92 0 0 0-.58-.884l-.053-.022a1.69 1.69 0 0 1-1.059-1.712L3.462.458A.5.5 0 0 1 3.96 0z"/>
+      </svg>
+    </div>
+      
+      </a>
+
+    <div class="icon" onclick="openImageModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-postcard-heart-fill" viewBox="0 0 16 16">
+  <path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm6 2.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0m3.5.878c1.482-1.42 4.795 1.392 0 4.622-4.795-3.23-1.482-6.043 0-4.622M2 5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5"/>
+</svg>
+    </div>
+
+    <div class="icon" onclick="openReserve()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <path d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M8 7.993c1.664-1.711 5.825 1.283 0 5.132-5.825-3.85-1.664-6.843 0-5.132"/>
+      </svg>
+    </div>
+
+    <div class="icon" onclick="openInfoModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building-exclamation" viewBox="0 0 16 16">
+  <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6.5a.5.5 0 0 1-1 0V1H3v14h3v-2.5a.5.5 0 0 1 .5-.5H8v4H3a1 1 0 0 1-1-1z"/>
+  <path d="M4.5 2a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm-6 3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm-6 3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm8.5 4.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1.5a.5.5 0 0 0 1 0V11a.5.5 0 0 0-.5-.5m0 4a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
+</svg>
+    </div>
+
+  </div>
+</div>
+
+  <div id="reserveModal">
+    <div class="close-reserve" onclick="closeReserve()">✕</div>
+
+    <h2>Reservas</h2>
+
+    <input id="rName" class="reserve-input" type="text" placeholder="Nombre y apellido">
+    <input id="rPeople" class="reserve-input" type="number" placeholder="Cuántas personas">
+    <input id="rOccasion" class="reserve-input" type="text" placeholder="Ocasión">
+    <div class="reserve-label">¿Deseas decoración?</div>
+<select id="rDecor" class="reserve-input">
+    <option value="" disabled selected>Selecciona</option>
+    <option value="Sí">Sí</option>
+    <option value="No">No</option>
+</select>
+    <div class="reserve-label">Hora y fecha</div>
+    <input id="rDateTime" class="reserve-input" type="datetime-local">
+    
+    <div id="reserveMsg" style="
+        color:#ffb84d;
+        font-size:13px;
+        display:none;
+        text-align:center;
+    ">
+        Completa todos los campos
+    </div>
+
+    <button class="reserve-btn" onclick="sendReservation()">
+        RESERVAR
+    </button>
+</div>
+
+<div id="infoModal" onclick="closeInfoModal()">
+    <div class="close-info" onclick="closeInfoModal()">✕</div>
+    <h2>Horario de atención</h2>
+    <p>Lunes a Domingo de 10:00 am a 11:00 pm</p>
+    
+    <div class="social-row" onclick="event.stopPropagation()">
+        
+        <a class="social-btn" href="https://wa.me/573123127181?text=Hola%20vengo%20de%20la%20app%20MyBarrio,%20tengo%20una%20duda" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16"> 
+  <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+</svg>
+        </a>
+
+        <a class="social-btn" href="tel:3123127181">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-telephone-forward" viewBox="0 0 16 16">
+  <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.6 17.6 0 0 0 4.168 6.608 17.6 17.6 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.68.68 0 0 0-.58-.122l-2.19.547a1.75 1.75 0 0 1-1.657-.459L5.482 8.062a1.75 1.75 0 0 1-.46-1.657l.548-2.19a.68.68 0 0 0-.122-.58zM1.884.511a1.745 1.745 0 0 1 2.612.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877zm10.762.135a.5.5 0 0 1 .708 0l2.5 2.5a.5.5 0 0 1 0 .708l-2.5 2.5a.5.5 0 0 1-.708-.708L14.293 4H9.5a.5.5 0 0 1 0-1h4.793l-1.647-1.646a.5.5 0 0 1 0-.708"/>
+</svg>
+        </a>
+
+        <a class="social-btn" href="https://www.google.com/maps/search/?api=1&query=CALLE+60A+SUR+64-54" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-geo-alt" viewBox="0 0 16 16">
+  <path d="M12.166 8.94c-.524 1.062-1.234 2.12-1.96 3.07A32 32 0 0 1 8 14.58a32 32 0 0 1-2.206-2.57c-.726-.95-1.436-2.008-1.96-3.07C3.304 7.867 3 6.862 3 6a5 5 0 0 1 10 0c0 .862-.305 1.867-.834 2.94M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10"/>
+  <path d="M8 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
+</svg>
+        </a>
+
+        <a class="social-btn" href="https://facebook.com" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-facebook" viewBox="0 0 16 16">
+  <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/>
+</svg>
+        </a>
+
+        <a class="social-btn" href="https://instagram.com" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-instagram" viewBox="0 0 16 16">
+  <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"/>
+</svg>
+        </a>
+
+    </div>
+</div>
+
+</body>
+</html>
